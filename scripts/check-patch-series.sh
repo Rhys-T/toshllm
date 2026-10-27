@@ -15,7 +15,12 @@ ROOT="$PWD"
 REF="${1:-origin/master}"
 REPORT="${2:-}"
 
-PIN="$(grep -oE 'LLAMA_COMMIT:-[a-f0-9]+' scripts/build-engines.sh | cut -d- -f2)"
+# Baseline is the last *committed* pin, not the working-tree value: the Actions workflow
+# rewrites build-engines.sh in place before this script runs (it pins the new commit first),
+# so a plain file read would make PIN equal to HEAD_SHA and log "commit..commit" = nothing.
+# git HEAD is untouched by that staged-but-uncommitted edit, giving the real previous commit.
+PIN="$(git -C "$ROOT" show "HEAD:scripts/build-engines.sh" 2>/dev/null | grep -oE 'LLAMA_COMMIT:-[a-f0-9]+' | cut -d- -f2)"
+[ -z "$PIN" ] && PIN="$(grep -oE 'LLAMA_COMMIT:-[a-f0-9]+' scripts/build-engines.sh | cut -d- -f2)"
 
 # Work off the vendor clone when it exists (it already has the objects); otherwise make a
 # throwaway blobless clone. Either way the check runs in its own worktree and never touches
